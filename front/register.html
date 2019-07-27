@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="cdn/style.css">
+  <title>CallGov - регистрация</title>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="row">
+                <div class="col-7 p-1">
+                  <img src="cdn/icons8-paper-waste-100.png" style= "width:40px; float: left; margin-right: 10px;" />
+      <h2>CallGov</h2>
+      </div>
+          {{if .ID}}
+          <div class="reg-buttons-logged">
+          <form id="formLogin" action="/logout" method="post">
+            <button class="btn btn-light">Log out</button>
+           {{if .AType}}{{.AType}}{{end}}: {{if .Name}}{{.Name}}{{end}}
+            </form>
+          </div>
+          {{else}}
+          <div class="col-5 p-2">
+              <form id="loginForm" action="/login" method="post">
+              <input type="text" class="form-control" id="loginName" placeholder="Enter login" style="width: 39%; float: left; margin-right:1%">
+      
+                        <input type="password" class="form-control" id="loginPassword" placeholder="Password" style="width: 39%; float: left; margin-right:1%">
+      
+                      <button type="submit" class="btn btn-light" style="width: 19%" onclick="doLogin()">Submit</button>
+              
+                        </form>
+                    </div>
+          {{end}}
+      </div>
+      </div>
+      </header>
+  <div class="container">
+    <div class="row m-3">
+      <div class="col">
+          <h2>Регистрация</h2>
+          <form>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="inputEmail4">Email</label>
+                  <input type="email" class="form-control" id="inputEmail4" placeholder="">
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="inputPassword4">Пароль</label>
+                  <input type="password" class="form-control" id="inputPassword4" placeholder="">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="inputAddress">Адрес</label>
+                <input type="text" class="form-control" id="inputAddress" placeholder="">
+              </div>
+              <div class="form-group">
+                <label for="inputAddress2">Адрес 2</label>
+                <input type="text" class="form-control" id="inputAddress2" placeholder="">
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="inputCity">Населенный пункт</label>
+                  <input type="text" class="form-control" id="inputCity">
+                </div>
+                <div class="form-group col-md-2">
+                  <label for="inputZip">Индекс</label>
+                  <input type="text" class="form-control" id="inputZip">
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="gridCheck">
+                  <label class="form-check-label" for="gridCheck">
+                    Запомнить меня
+                  </label>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Регистрация</button>
+            </form>
+      </div>
+    </div>
+
+    </div>
+  </div>
+
+  <footer>
+      <div class="container">
+          <div class="row">
+              <div class="col-12 p-1">
+    <h5>&copy; CallGov, 2019</h5>
+    </div>
+    
+    </div>
+    </div>
+    
+  </footer>
+  <!-- Optional JavaScript -->
+  <script src="cdn/script.js"></script>
+  <script src="https://kit.fontawesome.com/2119bce33f.js"></script>
+
+  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+    integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous">
+  </script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+    integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous">
+  </script>
+</body>
+
+</html>

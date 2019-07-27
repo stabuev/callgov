@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
     integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="cdn/style.css">
-  <title>Hello, world!</title>
+  <title>CallGov - ваше обращение важно для нас</title>
 </head>
 
 <body>
@@ -18,22 +18,28 @@
   <div class="container">
       <div class="row">
           <div class="col-7 p-1">
+            <img src="cdn/icons8-paper-waste-100.png" style= "width:40px; float: left; margin-right: 10px;" />
 <h2>CallGov</h2>
 </div>
+    {{if .ID}}
+    <div class="reg-buttons-logged">
+    <form id="formLogin" action="/logout" method="post">
+      <button class="btn btn-light">Log out</button>
+     {{if .AType}}{{.AType}}{{end}}: {{if .Name}}{{.Name}}{{end}}
+      </form>
+    </div>
+    {{else}}
+    <div class="col-5 p-2">
+        <form id="loginForm" action="/login" method="post">
+        <input type="text" class="form-control" id="loginName" placeholder="Enter login" style="width: 39%; float: left; margin-right:1%">
 
-<div class="col-2 p-2">
+                  <input type="password" class="form-control" id="loginPassword" placeholder="Password" style="width: 39%; float: left; margin-right:1%">
 
-
-<input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter email">
-</div>  
-<div class="col-2 p-2">
-          <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Password">
-</div>
-          <div class="col-1 p-2">
-        <button type="submit" class="btn btn-light">Submit</button>
-
-
-      </div>
+                <button type="submit" class="btn btn-light" style="width: 19%" onclick="doLogin()">Submit</button>
+        
+                  </form>
+              </div>
+    {{end}}
 </div>
 </div>
 </header>
@@ -192,6 +198,7 @@
     
   </footer>
   <!-- Optional JavaScript -->
+  <script src="cdn/script.js"></script>
   <script src="https://kit.fontawesome.com/2119bce33f.js"></script>
 
   <!-- jQuery first, then Popper.js, then Bootstrap JS -->
