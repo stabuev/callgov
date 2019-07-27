@@ -23,8 +23,6 @@ import (
 
 type Account struct {
 	Id    uint32
-	Name  string
-	AType string
 	Token string
 }
 
@@ -72,7 +70,7 @@ func newGServer() *GServer {
 //
 // setSession
 //
-func (gsrv *GServer) setSession(id uint32, name, atype string) (sid string) {
+func (gsrv *GServer) setSession(id uint32) (sid string) {
 	// look for active session
 	for idx := range gsrv.session {
 		if gsrv.session[idx].Id == id {
@@ -90,8 +88,6 @@ func (gsrv *GServer) setSession(id uint32, name, atype string) (sid string) {
 			gsrv.session[sid] = new(Account)
 			gsrv.session[sid].Id = id
 			gsrv.session[sid].Token = hex.EncodeToString(mac.Sum(nil)[0:16])
-			gsrv.session[sid].Name = name
-			gsrv.session[sid].AType = atype
 		}
 	}
 	return
@@ -140,16 +136,18 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 				defer r.Body.Close()
 				body, _ := ioutil.ReadAll(r.Body)
+				log.Print(string(body))
 				err = json.Unmarshal(body, &req)
+				log.Println(err)
 				if err == nil {
 					err = gsrv.db.QueryRow("SELECT id, name, type FROM account WHERE login=? AND password=?", req.Login, req.Password).Scan(&id, &name, &atype)
 					if err == nil {
-						sid = gsrv.setSession(id, name, atype)
+						sid = gsrv.setSession(id)
 						if sid != "" {
 							//newcookie := http.Cookie{Name: "sid", Value: sid, Path: "/", Domain: r.URL.Host , Expires: time.Now().UTC().Add(time.Hour * 24)}
 							newcookie := http.Cookie{Name: "sid", Value: sid, Path: "/", Domain: r.URL.Host}
 							http.SetCookie(w, &newcookie)
-							token = gsrv.session["sid"].Token
+							token = gsrv.session[sid].Token
 						}
 					}
 				}
@@ -173,6 +171,17 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+			var id uint32
+			var name string
+			var atype, token string
+			if sid != "" {
+				id = gsrv.session[sid].Id
+				err = gsrv.db.QueryRow(`SELECT name, type FROM account WHERE id=?`, id).Scan(&name, &atype)
+				log.Println(err)
+				token = gsrv.session[sid].Token
+			}
+
 			gsrv.tmpl = template.Must(template.ParseGlob(baseDir + "/vhosts/front/*.html"))
 
 			var page string = r.URL.Path[1:]
@@ -180,15 +189,14 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				page = "index"
 			}
 
+			log.Println(id, name, atype, token)
 			if gsrv.tmpl.Lookup(page+".html") != nil {
-
-				var query string
-				//var token string = r.FormValue("token")
-				//if ok, _, _ := checkStatTokenCore(token, xoConf.Key); ok {
-				//	query = "?token=" + token
-				//}
-
-				err = gsrv.tmpl.ExecuteTemplate(w, page+".html", struct{ Query string }{query})
+				err = gsrv.tmpl.ExecuteTemplate(w, page+".html", struct {
+					ID    uint32
+					Name  string
+					AType string
+					Token string
+				}{id, name, atype, token})
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					log.Println(err)
