@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">CallGov</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="do_no_have_an_account_create_one">Do no have an account?
+        <b>Create one</b>
+    </string>
+    <string name="login">Login</string>
+    <string-array name="pp">
+        <item>Публичное</item>
+        <item>Приватное</item>
+    </string-array>
+    <string-array name="work_status">
+        <item>В роботе</item>
+        <item>Готово</item>
+    </string-array>
+    <string name="title_activity_main">MainActivity</string>
+</resources>

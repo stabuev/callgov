@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="2dp"
+>
+
+    <ImageView
+            android:layout_width="0dp"
+            android:layout_height="90dp"
+            tools:srcCompat="@tools:sample/avatars"
+            app:srcCompat = "@drawable/app_icon"
+            android:id="@+id/obrImage"
+            android:scaleType="centerCrop"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintDimensionRatio="H,1:1"
+    />
+    <TextView
+            android:gravity="center_vertical"
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:id="@+id/obrTextView"
+            app:layout_constraintTop_toTopOf="@+id/obrImage"
+            app:layout_constraintStart_toEndOf="@+id/obrImage"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:textStyle="bold"
+            android:textSize="18sp"
+    />
+    <TextView
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:id="@+id/textView"
+            app:layout_constraintTop_toBottomOf="@+id/obrTextView" app:layout_constraintStart_toEndOf="@+id/obrImage"
+            app:layout_constraintBottom_toBottomOf="@+id/obrImage" app:layout_constraintEnd_toEndOf="parent"
+    />
+</androidx.constraintlayout.widget.ConstraintLayout>
