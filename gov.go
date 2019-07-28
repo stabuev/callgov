@@ -258,6 +258,32 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write([]byte("{\"status\":\"" + status + "\"}"))
 
+	} else if r.URL.Path == "/json/comment" {
+
+		w.Header().Set("Content-Type", "application/json")
+		var status string = "error"
+		if sid != "" {
+			var req struct {
+				Id      uint32 `json:"id"`
+				Content string `json:"content"`
+			}
+
+			defer r.Body.Close()
+			body, _ := ioutil.ReadAll(r.Body)
+			log.Println(string(body))
+			err = json.Unmarshal(body, &req)
+			if err == nil && req.Id != 0 {
+				var state string
+				gsrv.db.QueryRow("SELECT state FROM obr WHERE id=?", req.Id).Scan(&state)
+				_, err = gsrv.db.Exec("INSERT INTO comment (obr_id, account_id, content, type) VALUES(?,?,?,?)",
+					req.Id, gsrv.session[sid].Id, req.Content, state)
+				if err == nil {
+					status = "ok"
+				}
+			}
+		}
+		w.Write([]byte("{\"status\":\"" + status + "\"}"))
+
 	} else if r.URL.Path == "/json/sign" {
 
 		w.Header().Set("Content-Type", "application/json")
@@ -294,6 +320,7 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		defer r.Body.Close()
 		body, _ := ioutil.ReadAll(r.Body)
+		//log.Println(string(body))
 		err = json.Unmarshal(body, &req)
 		if err == nil && req.Id != 0 {
 			where = fmt.Sprintf("WHERE o.id=%d", req.Id)
@@ -318,28 +345,83 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			o.dtreg,
 			o.dtlast,
 			(SELECT COUNT(*) FROM obr_sign os WHERE o.id=os.obr_id),
-			%s
+			%s,
+			(SELECT COUNT(*) FROM comment cc WHERE o.id=cc.obr_id)
 			FROM obr o
 			LEFT JOIN account a ON o.account_id=a.id
 			%s ORDER by o.dtlast DESC`, signed, where)
+		log.Println(stmt)
+
 		rows, err = gsrv.db.Query(stmt)
+		log.Println(err)
 		if err == nil {
 			defer rows.Close()
 			var cnt int
 			for rows.Next() {
-				var id, title, content, name, public, state, address, dtreg, dtlast, totalsign, sign string
-				err = rows.Scan(&id, &title, &content, &name, &public, &state, &address, &dtreg, &dtlast, &totalsign, &sign)
+				var id, title, content, name, public, state, address, dtreg, dtlast, totalsign, sign, ccnt string
+				err = rows.Scan(&id, &title, &content, &name, &public, &state, &address, &dtreg, &dtlast, &totalsign, &sign, &ccnt)
 				if err == nil {
 					if cnt > 0 {
 						jresp.WriteString(",")
 					}
 					jresp.WriteString("[\"")
-					jresp.WriteString(strings.Join([]string{id, title, content, name, public, state, address, dtreg, dtlast, totalsign, sign}, "\",\""))
+					jresp.WriteString(strings.Join([]string{id, title, content, name, public, state, address, dtreg, dtlast, totalsign, sign, ccnt}, "\",\""))
 					jresp.WriteString("\"]")
 					cnt++
 				}
 			}
 		}
+		jresp.WriteString("]}")
+		w.Write(jresp.Bytes())
+
+	} else if r.URL.Path == "/json/commentlist" {
+		var rows *sql.Rows
+		w.Header().Set("Content-Type", "application/json")
+
+		var req struct {
+			Id uint32 `json:"id"`
+		}
+
+		defer r.Body.Close()
+		body, _ := ioutil.ReadAll(r.Body)
+		log.Println(string(body))
+		err = json.Unmarshal(body, &req)
+		log.Println(err)
+
+		var jresp bytes.Buffer
+		jresp.WriteString("{\"comment\":[")
+
+		if err == nil && req.Id != 0 {
+
+			var stmt string = fmt.Sprintf(`SELECT
+			c.content,
+			a.name,
+			c.dt
+			FROM comment c
+			LEFT JOIN account a ON c.account_id=a.id
+			WHERE c.obr_id=%d
+			ORDER by c.dt DESC`, req.Id)
+			log.Println(stmt)
+			rows, err = gsrv.db.Query(stmt)
+			if err == nil {
+				defer rows.Close()
+				var cnt int
+				for rows.Next() {
+					var content, name, dt string
+					err = rows.Scan(&content, &name, &dt)
+					if err == nil {
+						if cnt > 0 {
+							jresp.WriteString(",")
+						}
+						jresp.WriteString("[\"")
+						jresp.WriteString(strings.Join([]string{content, name, dt}, "\",\""))
+						jresp.WriteString("\"]")
+						cnt++
+					}
+				}
+			}
+		}
+
 		jresp.WriteString("]}")
 		w.Write(jresp.Bytes())
 
