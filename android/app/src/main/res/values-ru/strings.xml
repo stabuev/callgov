@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CallGov</string>
+    <string name="email">Электронная почта</string>
+    <string name="password">Пароль</string>
+    <string name="do_no_have_an_account_create_one">Нет аккаунта?
+        <b>Зарегистрируйтесь</b>
+    </string>
+    <string name="login">Войти</string>
+</resources>
