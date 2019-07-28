@@ -148,3 +148,22 @@ function signObr(id){
     req.send('{"id":' + id + '}'); 
     getObr(id);
 }
+
+function getSign(id){
+    var content = document.getElementById("signList")
+	while (content.firstChild) {
+		content.removeChild(content.firstChild);
+	}
+	var req = new XMLHttpRequest();
+    req.open("POST", "/json/signlist");
+    req.setRequestHeader("Content-Type", "application/json");
+    req.send('{"id":' + id + '}'); 
+	req.onload = function (e) {
+            var msg = JSON.parse(req.responseText);
+            for(var sign of msg.sign){
+            var div = document.createElement("div")
+            div.innerText = sign[1];
+            content.appendChild(div);
+    }
+}
+}
