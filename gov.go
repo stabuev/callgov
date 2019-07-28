@@ -131,7 +131,8 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	gsrv.muSession.Lock()
 	var sid string = gsrv.getSession(r)
 
-	if (r.URL.Path == "/" || r.URL.Path == "/register" || r.URL.Path == "/obr") && r.Method == http.MethodGet || (r.URL.Path == "/login" || r.URL.Path == "/logout") && r.Method == http.MethodPost {
+	if (r.URL.Path == "/" || r.URL.Path == "/register" || r.URL.Path == "/obr" || r.URL.Path == "/detail") &&
+		r.Method == http.MethodGet || (r.URL.Path == "/login" || r.URL.Path == "/logout") && r.Method == http.MethodPost {
 
 		// Login & logout
 		if r.Method == http.MethodPost {
@@ -257,6 +258,30 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write([]byte("{\"status\":\"" + status + "\"}"))
 
+	} else if r.URL.Path == "/json/sign" {
+
+		w.Header().Set("Content-Type", "application/json")
+		var status string = "error"
+		if sid != "" {
+			var req struct {
+				Id uint32 `json:"id"`
+			}
+
+			defer r.Body.Close()
+			body, _ := ioutil.ReadAll(r.Body)
+			err = json.Unmarshal(body, &req)
+			if err == nil {
+				if req.Id != 0 {
+					// Create obr
+					_, err = gsrv.db.Exec("INSERT INTO obr_sign (obr_id, account_id) VALUES(?,?)", req.Id, gsrv.session[sid].Id)
+					if err == nil {
+						status = "ok"
+					}
+				}
+			}
+		}
+		w.Write([]byte("{\"status\":\"" + status + "\"}"))
+
 	} else if r.URL.Path == "/json/obrlist" {
 		var rows *sql.Rows
 		w.Header().Set("Content-Type", "application/json")
@@ -273,8 +298,15 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err == nil && req.Id != 0 {
 			where = fmt.Sprintf("WHERE o.id=%d", req.Id)
 		}
+		var signed string
+		if sid != "" {
+			signed = fmt.Sprintf("(SELECT COUNT(*) FROM obr_sign os WHERE o.id=os.obr_id AND os.account_id=%d)", gsrv.session[sid].Id)
+		} else {
+			signed = "3"
+		}
 
 		var jresp bytes.Buffer
+		jresp.WriteString("{\"obr\":[")
 		var stmt string = fmt.Sprintf(`SELECT
 			o.id,
 			o.title,
@@ -284,24 +316,72 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			o.state,
 			o.address,
 			o.dtreg,
-			o.dtlast
-			FROM obr o LEFT JOIN account a ON o.account_id=a.id %s ORDER by o.dtlast DESC`, where)
+			o.dtlast,
+			(SELECT COUNT(*) FROM obr_sign os WHERE o.id=os.obr_id),
+			%s
+			FROM obr o
+			LEFT JOIN account a ON o.account_id=a.id
+			%s ORDER by o.dtlast DESC`, signed, where)
 		rows, err = gsrv.db.Query(stmt)
 		if err == nil {
 			defer rows.Close()
-			jresp.WriteString("{\"obr\":[")
 			var cnt int
 			for rows.Next() {
-				var id, title, content, name, public, state, address, dtreg, dtlast string
-				err = rows.Scan(&id, &title, &content, &name, &public, &state, &address, &dtreg, &dtlast)
+				var id, title, content, name, public, state, address, dtreg, dtlast, totalsign, sign string
+				err = rows.Scan(&id, &title, &content, &name, &public, &state, &address, &dtreg, &dtlast, &totalsign, &sign)
 				if err == nil {
 					if cnt > 0 {
 						jresp.WriteString(",")
 					}
 					jresp.WriteString("[\"")
-					jresp.WriteString(strings.Join([]string{id, title, content, name, public, state, address, dtreg, dtlast}, "\",\""))
+					jresp.WriteString(strings.Join([]string{id, title, content, name, public, state, address, dtreg, dtlast, totalsign, sign}, "\",\""))
 					jresp.WriteString("\"]")
 					cnt++
+				}
+			}
+		}
+		jresp.WriteString("]}")
+		w.Write(jresp.Bytes())
+
+	} else if r.URL.Path == "/json/signlist" {
+		var rows *sql.Rows
+		w.Header().Set("Content-Type", "application/json")
+
+		var req struct {
+			Id uint32 `json:"id"`
+		}
+
+		var jresp bytes.Buffer
+		jresp.WriteString("{\"sign\":[")
+
+		defer r.Body.Close()
+		body, _ := ioutil.ReadAll(r.Body)
+		err = json.Unmarshal(body, &req)
+		if err == nil && req.Id != 0 {
+
+			var stmt string = fmt.Sprintf(`SELECT
+			a.id,
+			a.name,
+			os.dt
+			FROM obr_sign os
+			LEFT JOIN account a ON os.account_id=a.id
+			WHERE os.obr_id=%d ORDER BY os.dt ASC`, req.Id)
+			rows, err = gsrv.db.Query(stmt)
+			if err == nil {
+				defer rows.Close()
+				var cnt int
+				for rows.Next() {
+					var id, name, dt string
+					err = rows.Scan(&id, &name, &dt)
+					if err == nil {
+						if cnt > 0 {
+							jresp.WriteString(",")
+						}
+						jresp.WriteString("[\"")
+						jresp.WriteString(strings.Join([]string{id, name, dt}, "\",\""))
+						jresp.WriteString("\"]")
+						cnt++
+					}
 				}
 			}
 		}
