@@ -1,18 +1,19 @@
 package main
 
 import (
-	"html/template"
-	"io"
-	"io/ioutil"
-	"log"
-	"net/http"
-	//"path/filepath"
+	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"html/template"
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -67,6 +68,31 @@ func newGServer() *GServer {
 	return srv
 }
 
+func (gsrv *GServer) getSession(r *http.Request) (sid string) {
+	// cookies and runtime session must exist at the same time
+	cookie, err := r.Cookie("sid")
+	if err == nil {
+		sid = cookie.Value
+		_, ok := gsrv.session[sid]
+		if !ok {
+			sid = ""
+		}
+	}
+	// check token
+	if sid == "" {
+		token, ok := r.URL.Query()["token"]
+		if ok {
+			for idx := range gsrv.session {
+				if gsrv.session[idx].Token == token[0] {
+					sid = idx
+					break
+				}
+			}
+		}
+	}
+	return
+}
+
 //
 // setSession
 //
@@ -95,28 +121,17 @@ func (gsrv *GServer) setSession(id uint32) (sid string) {
 
 func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	//var url string
+	var now string = time.Now().UTC().Format("2006-01-02 15:04:05")
 
 	err := gsrv.db.Ping()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if r.URL.Path == "/" && r.Method == http.MethodGet || (r.URL.Path == "/login" || r.URL.Path == "/logout") && r.Method == http.MethodPost {
+	gsrv.muSession.Lock()
+	var sid string = gsrv.getSession(r)
 
-		gsrv.muSession.Lock()
-
-		var sid string
-
-		// cookies and runtime session must exist at the same time
-		cookie, err := r.Cookie("sid")
-		if err == nil {
-			sid = cookie.Value
-			_, ok := gsrv.session[sid]
-			if !ok {
-				sid = ""
-			}
-		}
+	if (r.URL.Path == "/" || r.URL.Path == "/register" || r.URL.Path == "/obr") && r.Method == http.MethodGet || (r.URL.Path == "/login" || r.URL.Path == "/logout") && r.Method == http.MethodPost {
 
 		// Login & logout
 		if r.Method == http.MethodPost {
@@ -136,9 +151,7 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 				defer r.Body.Close()
 				body, _ := ioutil.ReadAll(r.Body)
-				log.Print(string(body))
 				err = json.Unmarshal(body, &req)
-				log.Println(err)
 				if err == nil {
 					err = gsrv.db.QueryRow("SELECT id, name, type FROM account WHERE login=? AND password=?", req.Login, req.Password).Scan(&id, &name, &atype)
 					if err == nil {
@@ -160,6 +173,7 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					delete(gsrv.session, sid)
 					sid = ""
 					// delete cookie
+					cookie, _ := r.Cookie("sid")
 					cookie.Expires = time.Now().UTC().AddDate(0, 0, -1)
 					http.SetCookie(w, cookie)
 
@@ -178,7 +192,6 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if sid != "" {
 				id = gsrv.session[sid].Id
 				err = gsrv.db.QueryRow(`SELECT name, type FROM account WHERE id=?`, id).Scan(&name, &atype)
-				log.Println(err)
 				token = gsrv.session[sid].Token
 			}
 
@@ -189,7 +202,6 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				page = "index"
 			}
 
-			log.Println(id, name, atype, token)
 			if gsrv.tmpl.Lookup(page+".html") != nil {
 				err = gsrv.tmpl.ExecuteTemplate(w, page+".html", struct {
 					ID    uint32
@@ -206,7 +218,95 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		gsrv.muSession.Unlock()
+	} else if r.URL.Path == "/json/obr" {
+
+		w.Header().Set("Content-Type", "application/json")
+		var status string = "error"
+		if sid != "" {
+			var req struct {
+				Id      uint32 `json:"id"`
+				Title   string `json:"title"`
+				Content string `json:"content"`
+				Public  uint8  `json:"public"`
+				State   string `json:"state"`
+				Address string `json:"address"`
+			}
+
+			defer r.Body.Close()
+			body, _ := ioutil.ReadAll(r.Body)
+			log.Println(string(body))
+			err = json.Unmarshal(body, &req)
+			if err == nil {
+				if req.Id == 0 {
+					// Create obr
+					_, err = gsrv.db.Exec("INSERT INTO obr (title, content, account_id, public, state, address) VALUES(?,?,?,?,?,?)",
+						req.Title, req.Content, gsrv.session[sid].Id, req.Public, req.State, req.Address)
+					if err == nil {
+						status = "ok"
+					}
+				} else {
+					_, err = gsrv.db.Exec("UPDATE obr SET title=?, content=?, public=?, state=?, address=?, dtlast=? WHERE id=?",
+						req.Title, req.Content, req.Public, req.State, req.Address, now, req.Id)
+					if err == nil {
+						status = "ok"
+					}
+				}
+			} else {
+				log.Println(err)
+			}
+		}
+		w.Write([]byte("{\"status\":\"" + status + "\"}"))
+
+	} else if r.URL.Path == "/json/obrlist" {
+		var rows *sql.Rows
+		w.Header().Set("Content-Type", "application/json")
+
+		var where string
+
+		var req struct {
+			Id uint32 `json:"id"`
+		}
+
+		defer r.Body.Close()
+		body, _ := ioutil.ReadAll(r.Body)
+		err = json.Unmarshal(body, &req)
+		if err == nil && req.Id != 0 {
+			where = fmt.Sprintf("WHERE o.id=%d", req.Id)
+		}
+
+		var jresp bytes.Buffer
+		var stmt string = fmt.Sprintf(`SELECT
+			o.id,
+			o.title,
+			o.content,
+			a.name,
+			o.public,
+			o.state,
+			o.address,
+			o.dtreg,
+			o.dtlast
+			FROM obr o LEFT JOIN account a ON o.account_id=a.id %s ORDER by o.dtlast DESC`, where)
+		rows, err = gsrv.db.Query(stmt)
+		if err == nil {
+			defer rows.Close()
+			jresp.WriteString("{\"obr\":[")
+			var cnt int
+			for rows.Next() {
+				var id, title, content, name, public, state, address, dtreg, dtlast string
+				err = rows.Scan(&id, &title, &content, &name, &public, &state, &address, &dtreg, &dtlast)
+				if err == nil {
+					if cnt > 0 {
+						jresp.WriteString(",")
+					}
+					jresp.WriteString("[\"")
+					jresp.WriteString(strings.Join([]string{id, title, content, name, public, state, address, dtreg, dtlast}, "\",\""))
+					jresp.WriteString("\"]")
+					cnt++
+				}
+			}
+		}
+		jresp.WriteString("]}")
+		w.Write(jresp.Bytes())
 
 	} else if strings.HasPrefix(r.URL.Path, "/json/") {
 		http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
@@ -215,5 +315,7 @@ func (gsrv *GServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 
 	}
+
+	gsrv.muSession.Unlock()
 
 }
