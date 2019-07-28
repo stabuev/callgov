@@ -57,7 +57,6 @@ function getObrList(){
 	req.onload = function (e) {
             var msg = JSON.parse(req.responseText);
             for(var obr of msg.obr){
-                console.log(obr)
                 var msgSign = "";
                 if (obr[10]==0){
                     msgSign = ', <span class="text-danger">не подписано</span>'
@@ -106,8 +105,10 @@ function getObr(id){
             var msg = JSON.parse(req.responseText);
             for(var obr of msg.obr){
                 var msgSign = "";
+                var buttonSign = ""
                 if (obr[10]==0){
                     msgSign = ', <span class="text-danger">не подписано</span>'
+                    buttonSign = '<button type="button" class="btn btn-success m-2" onclick="signObr('+obr[0]+')">Подписать обращение</button>'
                 } else if (obr[10]==1){
                     msgSign = ', <span class="text-success">подписано</span>'
                 }
@@ -129,13 +130,21 @@ function getObr(id){
    '<small>Подписей: <span class="text-muted">'+ obr[9] + msgSign + '</span></small></br>' +
                   '<small>Комментариев: <span class="text-muted">42</span></small></p>' +
                   '</div></div>' +
-                  '<button type="button" class="btn btn-success m-2">Подписать обращение</button>' +
+                  buttonSign +
                 '</div>' +
               '</div>' +
             '</div>'
             content.appendChild(div);
 
                 
-            }
+        }
     }          
+}
+
+function signObr(id){
+    var req = new XMLHttpRequest();
+    req.open("POST", "/json/sign");
+    req.setRequestHeader("Content-Type", "application/json");
+    req.send('{"id":' + id + '}'); 
+    getObr(id);
 }
