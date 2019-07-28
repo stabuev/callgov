@@ -22,10 +22,10 @@
       <h2>CallGov</h2>
       </div>
           {{if .ID}}
-          <div class="reg-buttons-logged">
+          <div class="col-5 p-2">
           <form id="formLogin" action="/logout" method="post">
-            <button class="btn btn-light">Log out</button>
            {{if .AType}}{{.AType}}{{end}}: {{if .Name}}{{.Name}}{{end}}
+           <button class="btn btn-light">Log out</button>
             </form>
           </div>
           {{else}}

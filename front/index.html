@@ -22,10 +22,10 @@
 <h2>CallGov</h2>
 </div>
     {{if .ID}}
-    <div class="reg-buttons-logged">
+    <div class="col-5 p-2">
     <form id="formLogin" action="/logout" method="post">
-      <button class="btn btn-light">Log out</button>
      {{if .AType}}{{.AType}}{{end}}: {{if .Name}}{{.Name}}{{end}}
+     <button class="btn btn-light">Log out</button>
       </form>
     </div>
     {{else}}
@@ -49,7 +49,7 @@
         <div class="card bg-light">
             <div class="card-header">Шаг 1.</div>
           <div class="card-body">
-            <h5 class="card-title">Зарегистрируйся на сайте</h5>
+            <h5 class="card-title"><a href="/register">Зарегистрируйся на сайте</a></h5>
             <p class="card-text">Заполни простую форму для регистрации на сайте</p>
           </div>
         </div>
@@ -58,7 +58,7 @@
           <div class="card bg-light">
               <div class="card-header">Шаг 2.</div>
               <div class="card-body">
-                <h5 class="card-title">Сформируй обращение</h5>
+                <h5 class="card-title"><a href="/obr">Сформируй обращение</a></h5>
                 <p class="card-text">Сформулируй свое проблему или обращение в госорган власти</p>
               </div>
             </div>
