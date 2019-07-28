@@ -55,11 +55,12 @@
         <div class="col-8">
           <div class="card m-3 p-2" style="min-height:200px">
           <h3>Комментарии</h3>
-          <form>
-              <textarea rows=5 class="form-control" id="content"></textarea>
-              <button type="submit" class="btn btn-primary m-2" onclick="createComment()">Комментировать</button>
-          </form>
           <div id="commentList"></div>
+
+              <textarea rows=5 class="form-control" id="comm-content"></textarea>
+              <button class="btn btn-primary m-2" id="createComment">Комментировать</button>
+
+
         </div>
         </div>
 
@@ -90,6 +91,8 @@
         id = window.location.search.split('=')[1];
         getObr(id);
         getSign(id);
+        getComments(id);
+        document.getElementById("createComment").addEventListener("click", function(){createComment(window.location.search.split('=')[1])});
   });
 </script>
   <script src="cdn/script.js"></script>

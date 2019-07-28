@@ -79,7 +79,7 @@ function getObrList(){
                     '<div class="col-md-6">' +
                         '<p class="card-text">' +
    '<small>Подписей: <span class="text-muted">'+ obr[9] + msgSign + '</span></small></br>' +
-                  '<small>Комментариев: <span class="text-muted">42</span></small></p>' +
+                  '<small>Комментариев: <span class="text-muted">'+ obr[11] +'</span></small></p>' +
                   '</div></div>' +
                 '</div>' +
               '</div>' +
@@ -128,7 +128,7 @@ function getObr(id){
                     '<div class="col-md-6">' +
                         '<p class="card-text">' +
    '<small>Подписей: <span class="text-muted">'+ obr[9] + msgSign + '</span></small></br>' +
-                  '<small>Комментариев: <span class="text-muted">42</span></small></p>' +
+                  '<small>Комментариев: <span class="text-muted">'+ obr[11] +'</span></small></p>' +
                   '</div></div>' +
                   buttonSign +
                 '</div>' +
@@ -166,4 +166,49 @@ function getSign(id){
             content.appendChild(div);
     }
 }
+}
+
+function createComment(id) {
+    console.log(id)
+
+    // Запрос: {"id":uint32, "title":"TITLE", "content":"CONTENT", "public":0|1,  "state":"draft|sign|post","address":"ADDRESS"}
+
+
+    var content = document.getElementById("comm-content").value;
+
+	var req = new XMLHttpRequest();
+	req.onload = function(e) {
+		window.location.replace("/detail?id="+ id);
+	};
+    
+
+	req.open("POST", "/json/comment");
+	req.setRequestHeader("Content-Type", "application/json");
+	req.send('{"id":' + id + ',"content":"' + content + '"}');
+}
+
+function getComments(id) {
+    var content = document.getElementById("commentList")
+	while (content.firstChild) {
+		content.removeChild(content.firstChild);
+	}
+	var req = new XMLHttpRequest();
+    req.open("POST", "/json/commentlist");
+    req.setRequestHeader("Content-Type", "application/json");
+    req.send('{"id":' + id + '}'); 
+	req.onload = function (e) {
+            var msg = JSON.parse(req.responseText);
+            for(var comment of msg.comment){
+            var div = document.createElement("div")
+            div.classList.add("m-3")
+            var div2 = document.createElement("div")
+            div2.innerText = comment[0];
+            var small = document.createElement("small");
+            small.innerText = comment[1] + " // " + comment[2]
+            div.append(div2)
+            div.appendChild(small)
+            content.appendChild(div);
+    }
+}
+
 }
